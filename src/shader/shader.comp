@@ -1,0 +1,166 @@
+#version 450 core
+#extension GL_ARB_shading_language_include : enable
+
+/* Flags. */
+#define MESH_FLAGS(mesh, flag)   mesh.flags[(flag) / 32]
+#define MESH_FLAGPOS(flag) (1 << ((flag) % 32))
+#define MESH_ISSET(mesh, flag)   ((MESH_FLAGS(mesh, flag) & MESH_FLAGPOS(flag)) != 0)
+#define MESH_SET(mesh, flag)     MESH_FLAGS(mesh, flag) |= MESH_FLAGPOS(flag)
+#define MESH_UNSET(mesh, flag)   MESH_FLAGS(mesh, flag) &= ~MESH_FLAGPOS(flag)
+#define MESH_TOGGLE(mesh, flag)  MESH_FLAGS(mesh, flag) ^= MESH_FLAGPOS(flag)
+
+#define STATIC_MESH 1
+
+layout(local_size_x = 1) in;
+
+struct Particle {
+  vec3 pos;
+  vec3 vel;
+  vec3 accel;
+};
+
+struct ComputeData {
+  vec3 pos;
+  vec3 vel;
+  vec3 accel;
+  vec3 size;
+  int flags[2];
+};
+
+// Edge positions based on position and size
+float meshL(ComputeData m)  { return m.pos.x - (m.size.x / 2.0); }
+float meshR(ComputeData m)  { return m.pos.x + (m.size.x / 2.0); }
+float meshT(ComputeData m)  { return m.pos.y - (m.size.y / 2.0); }
+float meshB(ComputeData m)  { return m.pos.y + (m.size.y / 2.0); }
+float meshF(ComputeData m)  { return m.pos.z - (m.size.z / 2.0); }
+float meshBK(ComputeData m) { return m.pos.z + (m.size.z / 2.0); }
+
+// Collision check between two meshes
+bool meshColliding(ComputeData o, ComputeData so) {
+    return (meshR(o) >= meshL(so) && meshL(o) <= meshR(so) &&
+            meshB(o) >= meshT(so) && meshT(o) <= meshB(so) &&
+            meshBK(o) >= meshF(so) && meshF(o) <= meshBK(so));
+}
+
+// Overlap calculations for each side
+float meshOverlapL(ComputeData o, ComputeData so) { return meshR(o) - meshL(so); }
+float meshOverlapR(ComputeData o, ComputeData so) { return meshR(so) - meshL(o); }
+float meshOverlapT(ComputeData o, ComputeData so) { return meshB(o) - meshT(so); }
+float meshOverlapB(ComputeData o, ComputeData so) { return meshB(so) - meshT(o); }
+float meshOverlapF(ComputeData o, ComputeData so) { return meshBK(o) - meshF(so); }
+float meshOverlapBK(ComputeData o, ComputeData so) { return meshBK(so) - meshF(o); }
+
+// Finding the smallest overlap for each side
+bool meshOverlapLeastL(ComputeData o, ComputeData so) {
+    return meshOverlapL(o, so) < meshOverlapR(o, so) &&
+           meshOverlapL(o, so) < meshOverlapT(o, so) &&
+           meshOverlapL(o, so) < meshOverlapB(o, so) &&
+           meshOverlapL(o, so) < meshOverlapF(o, so) &&
+           meshOverlapL(o, so) < meshOverlapBK(o, so);
+}
+bool meshOverlapLeastR(ComputeData o, ComputeData so) {
+    return meshOverlapR(o, so) < meshOverlapL(o, so) &&
+           meshOverlapR(o, so) < meshOverlapT(o, so) &&
+           meshOverlapR(o, so) < meshOverlapB(o, so) &&
+           meshOverlapR(o, so) < meshOverlapF(o, so) &&
+           meshOverlapR(o, so) < meshOverlapBK(o, so);
+}
+bool meshOverlapLeastT(ComputeData o, ComputeData so) {
+    return meshOverlapT(o, so) < meshOverlapB(o, so) &&
+           meshOverlapT(o, so) < meshOverlapL(o, so) &&
+           meshOverlapT(o, so) < meshOverlapR(o, so) &&
+           meshOverlapT(o, so) < meshOverlapF(o, so) &&
+           meshOverlapT(o, so) < meshOverlapBK(o, so);
+}
+bool meshOverlapLeastB(ComputeData o, ComputeData so) {
+    return meshOverlapB(o, so) < meshOverlapT(o, so) &&
+           meshOverlapB(o, so) < meshOverlapL(o, so) &&
+           meshOverlapB(o, so) < meshOverlapR(o, so) &&
+           meshOverlapB(o, so) < meshOverlapF(o, so) &&
+           meshOverlapB(o, so) < meshOverlapBK(o, so);
+}
+bool meshOverlapLeastF(ComputeData o, ComputeData so) {
+    return meshOverlapF(o, so) < meshOverlapBK(o, so) &&
+           meshOverlapF(o, so) < meshOverlapL(o, so) &&
+           meshOverlapF(o, so) < meshOverlapR(o, so) &&
+           meshOverlapF(o, so) < meshOverlapT(o, so) &&
+           meshOverlapF(o, so) < meshOverlapB(o, so);
+}
+bool meshOverlapLeastBK(ComputeData o, ComputeData so) {
+    return meshOverlapBK(o, so) < meshOverlapF(o, so) &&
+           meshOverlapBK(o, so) < meshOverlapL(o, so) &&
+           meshOverlapBK(o, so) < meshOverlapR(o, so) &&
+           meshOverlapBK(o, so) < meshOverlapT(o, so) &&
+           meshOverlapBK(o, so) < meshOverlapB(o, so);
+}
+
+void mesh_collision_check(inout ComputeData o, const ComputeData so) {
+  if (meshColliding(o, so)) {
+    if (meshOverlapLeastB(o, so)) {
+      o.pos.y = (meshB(so) + (o.size.y / 2));
+      o.vel.y = 0.0;
+    }
+    else if (meshOverlapLeastT(o, so)) {
+      o.pos.y = (meshT(so) - (o.size.y / 2));
+      o.vel.y = 0.0;
+    }
+  }
+}
+
+// Buffer to hold particles.
+layout(std430, binding = 0) buffer ParticleBuffer { Particle particles[]; };
+// Buffer to hold compute data.
+layout(std430, binding = 1) buffer ComputeDataBuffer { ComputeData comp_data[]; };
+
+// Uniform`s to pass in time and constant force.
+uniform float delta_t;
+uniform vec3  c_force;
+
+uniform uint  operation;
+#define GRAVITY_OPERATION 0
+#define COLLISION_OPERATION 1
+
+/* Perform`s a rk4 step to a Particle over a set time. */
+void rk4_step(inout vec3 pos, inout vec3 vel, const in vec3 f) {
+  // Calculate force.
+  vec3 force = ((c_force + f) * delta_t);
+  // Calculate steps.
+  vec3 k1 = (vel * delta_t);
+  vec3 k2 = ((vel + 0.5 * force) * delta_t);
+  vec3 k3 = k2;
+  vec3 k4 = ((vel + force) * delta_t);
+  // Update pos and vel.
+  pos += ((k1 + 2.0 * k2 + 2.0 * k3 + k4) / 6.0);
+  vel += ((force + 2.0 * force + 2.0 * force + force) / 6.0);
+}
+
+void main() {
+  uint idx = gl_GlobalInvocationID.x;
+  // Only perform gravity calculations on non static meshes.
+  if MESH_ISSET(comp_data[idx], STATIC_MESH) {
+    comp_data[idx].vel   = vec3(0.0);
+    comp_data[idx].accel = vec3(0.0);
+    return;
+  }
+  switch (operation) {
+    case GRAVITY_OPERATION:
+      // Perform rk4 step for the particle at idx.
+      // rk4_step(comp_data[idx].pos, comp_data[idx].vel, delta_t, (c_force + comp_data[idx].accel));
+      rk4_step(comp_data[idx].pos, comp_data[idx].vel, comp_data[idx].accel);
+      if ((comp_data[idx].pos.y - (comp_data[idx].size.y / 2)) < 0.0) {
+        comp_data[idx].pos.y = 0.0;
+        comp_data[idx].vel.y = 0.0;
+      }
+     break;
+    case COLLISION_OPERATION:
+      for (uint i = 0; i < comp_data.length(); ++i) {
+        if (i == idx) {
+          continue;
+        }
+        mesh_collision_check(comp_data[idx], comp_data[i]);
+      }
+      break;
+  }
+}
+
+
