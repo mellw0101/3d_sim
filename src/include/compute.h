@@ -2,7 +2,8 @@
 
 #include <GL/glew.h>
 #include <Mlib/Vector.h>
-#include <glm/ext/vector_float3.hpp>
+// #include <glm/glm.hpp>
+#include <Mlib/openGL/shader.h>
 
 namespace /* Defines */ {
   #define FPS 120
@@ -18,36 +19,19 @@ namespace /* Defines */ {
 }
 
 __INLINE_NAMESPACE(ComputeStructs) {
-  __SHADER_DATA_STRUCT(vec3f,
-    float x;
-    float y;
-    float z;
-
-    operator glm::vec3(void) const {
-      return {this->x, this->y, this->z};
-    }
-
-    vec3f &operator=(const glm::vec3 &vec) {
-      this->x = vec.x;
-      this->y = vec.y;
-      this->z = vec.z;
-      return *this;
-    }
-  )
-
   struct Particle {
-    vec3f pos;
-    vec3f vel;
-    vec3f accel;
+    vec3 pos;
+    vec3 vel;
+    vec3 accel;
   };
 
   struct ComputeData {
-    vec3f pos;
-    vec3f vel;
-    vec3f accel;
-    vec3f size;
+    vec3 pos;
+    vec3 vel;
+    vec3 accel;
+    vec3 size;
     int flags[2];
-  };
+  } __align_size(16);
 }
 
 enum OperationType {

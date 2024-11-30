@@ -20,10 +20,10 @@ void cleanup(GameObject *game);
 void frame_end(time_point<high_resolution_clock> frame_start);
 
 /* camera.cpp */
-void init_camera(CameraObject *camera, const glm::mat4 &m = {1.0f}, const vec3 &v = {0.0f, 0.0f, -3.0f}) ;
+void init_camera(CameraObject *camera, const mat4 &m = {1.0f}, const vec3 &v = {0.0f, 0.0f, -3.0f}) ;
 void get_camera_direction(CameraObject *camera);
-void calculate_yaw_pitch_from_direction(CameraObject *camera, const glm::vec3 &direction);
-void change_camera_angle(CameraObject *camera, const glm::vec2 &change);
+void calculate_yaw_pitch_from_direction(CameraObject *camera, const vec3 &direction);
+void change_camera_angle(CameraObject *camera, const vec2 &change);
 void set_camera_pos(CameraObject *camera, const vec3 &pos);
-void change_camera_pos(CameraObject *camera, const glm::vec3 &change);
+void change_camera_pos(CameraObject *camera, const vec3 &change);
 void update_camera(CameraObject *camera);

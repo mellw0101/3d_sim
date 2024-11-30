@@ -20,7 +20,6 @@ void prosses_held_keys(GameObject *game) {
     change_camera_pos(&game->camera, {-0.02f, 0.0f, 0.0f});
   }
   if (state[SDL_SCANCODE_SPACE]) {
-    // game->camera.accel += vec3(0.0f, 1.0f, 0.0f);
     game->camera.vel.y = 5.0f;
   }
 }
@@ -33,8 +32,7 @@ void handle_events(GameObject *game) {
       break;
     case SDL_MOUSEMOTION:
       SDL_WarpMouseInWindow(game->win, (game->width / 2), (game->height / 2));
-      change_camera_angle(&game->camera,
-                          {game->ev.motion.xrel, game->ev.motion.yrel});
+      change_camera_angle(&game->camera, {(float)game->ev.motion.xrel, (float)game->ev.motion.yrel});
       break;
     }
   }
@@ -45,8 +43,8 @@ inline namespace Shapes {
   static MVector<float> floor_vertices = {
     /* positions */       /* normals */
     -5.0f, 0.0f, -5.0f,   0.0f, 1.0f, 0.0f, /* Bottom-left */
-    5.0f, 0.0f, -5.0f,   0.0f, 1.0f, 0.0f, /* Bottom-right */
-    5.0f, 0.0f,  5.0f,   0.0f, 1.0f, 0.0f, /* Top-right */
+     5.0f, 0.0f, -5.0f,   0.0f, 1.0f, 0.0f, /* Bottom-right */
+     5.0f, 0.0f,  5.0f,   0.0f, 1.0f, 0.0f, /* Top-right */
     -5.0f, 0.0f,  5.0f,   0.0f, 1.0f, 0.0f  /* Top-left */
   };
 
@@ -109,10 +107,40 @@ inline namespace Shapes {
   };
 }
 
+void test_mat4(void) {
+  mat4 a(
+    1.0,  2.0,  3.0,  4.0,
+    5.0,  6.0,  7.0,  8.0,
+    9.0, 10.0, 11.0, 12.0,
+    13.0, 14.0, 15.0, 16.0
+  );
+  mat4 b(
+    16.0 ,15.0 ,14.0, 13.0,
+    12.0 ,11.0 ,10.0 , 9.0,
+    8.0  ,7.0  ,6.0 , 5.0,
+    4.0  ,3.0  ,2.0 , 1.0
+  );
+  mat4 r = (a * b);
+  for (Uint i = 0; i < 4; ++i) {
+    printf("[ ");
+    for (Uint j = 0; j < 4; ++j) {
+      if (j != 3) {
+        printf("%f, ", r[i][j]);
+      }
+      else {
+        printf("%f", r[i][j]);
+      }
+    }
+    printf(" ]\n");
+  }
+  fflush(stdout);
+}
+
 int main(void) {
   GameObject game;
   game.camera.sensitivity = 0.07f;
-  calculate_yaw_pitch_from_direction(&game.camera, {0.0f, 0.0f, -3.0f});
+  // calculate_yaw_pitch_from_direction(&game.camera, {0.0f, 0.0f, -3.0f});
+  yaw_pitch_from_direction(vec3(0.0f, 0.0f, -3.0f), &game.camera.yaw, &game.camera.pitch);
   /* Init SDL. */
   openGL_init_SDL_with_GL_attr({
     {SDL_GL_CONTEXT_MAJOR_VERSION, 4},
@@ -121,8 +149,8 @@ int main(void) {
   });
   /* Create the window. */
   init_SDL_window(&game);
-  /* Create an OpenGL context. */
   game.context = openGL_init_SDL_GLContext(game.win, true);
+  /* Create an OpenGL context. */
   /* Setup view-port. */
   glViewport(0, 0, game.width, game.height);
   /* Load and compile shaders. */
@@ -140,13 +168,12 @@ int main(void) {
   set_sun_light_uniforms(&game);
   Mesh triangle(triangleVertices, triangleIndices, game.shader_program, red_color_vec);
   Mesh floor(floor_vertices, floor_indices, game.shader_program);
-  // floor.model = glm::translate({1.0f}, vec3{0.0f, -2.0f, 0.0f});
   floor.pos.y = -2.0f;
   Mesh cube(cubeVertices, cubeIndices, game.shader_program, red_color_vec);
   Mesh cube2(cubeVertices, cubeIndices, game.shader_program, blue_color_vec);
-  // MESH_SET(&cube2, STATIC_MESH);
+  MESH_SET(&cube2, STATIC_MESH);
   cube.pos.y = 4.0f;
-  cube.scale.x = 2.0f;
+  cube._scale.x = 2.0f;
   game.state.set<RUNNING>();
   MVector<Mesh> meshes;
   meshes.push_back(cube);

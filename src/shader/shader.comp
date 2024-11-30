@@ -136,22 +136,20 @@ void rk4_step(inout vec3 pos, inout vec3 vel, const in vec3 f) {
 
 void main() {
   uint idx = gl_GlobalInvocationID.x;
-  // Only perform gravity calculations on non static meshes.
-  if MESH_ISSET(comp_data[idx], STATIC_MESH) {
+  /* Only perform gravity calculations on non static meshes. */
+  if (MESH_ISSET(comp_data[idx], STATIC_MESH)) {
     comp_data[idx].vel   = vec3(0.0);
     comp_data[idx].accel = vec3(0.0);
     return;
   }
   switch (operation) {
     case GRAVITY_OPERATION:
-      // Perform rk4 step for the particle at idx.
-      // rk4_step(comp_data[idx].pos, comp_data[idx].vel, delta_t, (c_force + comp_data[idx].accel));
       rk4_step(comp_data[idx].pos, comp_data[idx].vel, comp_data[idx].accel);
       if ((comp_data[idx].pos.y - (comp_data[idx].size.y / 2)) < 0.0) {
         comp_data[idx].pos.y = 0.0;
         comp_data[idx].vel.y = 0.0;
       }
-     break;
+      break;
     case COLLISION_OPERATION:
       for (uint i = 0; i < comp_data.length(); ++i) {
         if (i == idx) {

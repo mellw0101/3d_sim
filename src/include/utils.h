@@ -4,16 +4,16 @@
 #include "def.h"
 #include <Mlib/float_calc.h>
 
-__INLINE_CONSTEXPR(vec3) direction_vec(float yaw, float pitch) {
-  vec3 dir;
-  dir.x = (cos(radiansf(yaw)) * cos(radiansf(pitch)));
-  dir.y = sin(radiansf(pitch));
-  dir.z = (sin(radiansf(yaw)) * cos(radiansf(pitch)));
-  return dir;
-}
+// __INLINE_CONSTEXPR(vec3) direction_vec(float yaw, float pitch) {
+//   vec3 dir;
+//   dir.x = (cos(radiansf(yaw)) * cos(radiansf(pitch)));
+//   dir.y = sin(radiansf(pitch));
+//   dir.z = (sin(radiansf(yaw)) * cos(radiansf(pitch)));
+//   return dir;
+// }
 
 __INLINE_CONSTEXPR(vec3) direction_vec(const vec3 &to, const vec3 &from) {
-  return glm::normalize(to - from);
+  return normalize(to - from);
 }
 
 __INLINE_CONSTEXPR(vec3) right_vec(float yaw) {
@@ -82,14 +82,14 @@ __INLINE_CONSTEXPR(vec3) verts_size_vec(const MVector<float> &verts) {
 
 __INLINE_CONSTEXPR(vec3) mat_scale_vec(const mat4 &mat) {
   vec3 scale;
-  scale.x = glm::length(vec3(mat[0]));
-  scale.y = glm::length(vec3(mat[1]));
-  scale.z = glm::length(vec3(mat[2]));
+  scale.x = length(vec3(mat[0].x, mat[0].y,  mat[0].z));
+  scale.y = length(vec3(mat[1].x, mat[1].y,  mat[1].z));
+  scale.z = length(vec3(mat[2].x, mat[2].y,  mat[2].z));
   return scale;
 }
 
 __INLINE_CONSTEXPR(vec3) mat_position_vec(const mat4 &mat) {
-  return vec3(mat[3]);
+  return vec3(mat[3].x ,mat[3].y, mat[3].z);
 }
 
 __INLINE_CONSTEXPR_VOID set_sun_light(GameObject *game, const vec3 &direction, const vec3 &color, float strength) {

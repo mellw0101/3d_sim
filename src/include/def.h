@@ -16,11 +16,14 @@
 #include <glm/glm.hpp>
 #include <glm/ext/scalar_uint_sized.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/detail/type_vec3.hpp>
+#include <glm/detail/type_mat4x4.hpp>
 #include <glm/gtc/type_ptr.hpp>
 /* Includes from my custom lib, called Mlib. */
 #include <Mlib/Flag.h>
 #include <Mlib/float_calc.h>
 #include <Mlib/Vector.h>
+#include <Mlib/openGL/shader.h>
 #include <Mlib/Pair.h>
 #include <Mlib/openGL/context.h>
 /* Eigen math lib. */
@@ -106,10 +109,10 @@ namespace /* Define. */ {
 
 using glm::fvec2;
 using glm::fvec3;
-using glm::vec2;
-using glm::vec3;
-using glm::vec4;
-using glm::mat4;
+// using glm::vec2;
+// using glm::vec3;
+// using glm::vec4;
+// using glm::mat4;
 
 using std::chrono::high_resolution_clock;
 using std::chrono::time_point;
@@ -117,7 +120,7 @@ using std::chrono::duration;
 using std::chrono::system_clock;
 
 /* Gravity along Y-axis */
-static __inline__ constexpr vec3 GRAVITY_FORCE = {0.0f, -GRAVITY, 0.0f};
+static __inline__ constexpr vec3 GRAVITY_FORCE(0.0f, -GRAVITY, 0.0f);
 
 __INLINE_NAMESPACE(ColorVec) {
   static __inline__ constexpr vec3 red_color_vec = {1.0f, 0.0f, 0.0f};

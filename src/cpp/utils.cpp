@@ -1,10 +1,9 @@
 #include "../include/prototypes.h"
-#include <glm/ext/matrix_clip_space.hpp>
 
 /* clang-format off */
 
 void init_projection(GameObject *game, float fov, float aspect_ratio, float znear, float zfar) {
-  game->projection = glm::perspective(fov, aspect_ratio, znear, zfar);
+  game->projection = perspective(fov, aspect_ratio, znear, zfar);
 }
 
 /* Initialize SDL and set all GL attribute pair`s. */

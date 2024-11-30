@@ -67,25 +67,30 @@ mat4 translate(mat4 matrix, vec3 pos) {
   return matrix;
 }
 
+mat4 identity(float val) {
+  return mat4(
+    val,  0.0f, 0.0f, 0.0f,
+    0.0f, val,  0.0f, 0.0f,
+    0.0f, 0.0f, val,  0.0f,
+    0.0f, 0.0f, 0.0f, val
+  );
+}
+
 mat4 create_model_matrix(vec3 scale, vec3 rotation, vec3 pos) {
   mat4 smat = scale_matrix(scale);
   mat4 rmat = rotation_matrix(rotation);
-  mat4 tmat = mat4(
-    1.0, 0.0, 0.0, pos.x,
-    0.0, 1.0, 0.0, pos.y,
-    0.0, 0.0, 1.0, pos.z,
-    0.0, 0.0, 0.0, 1.0
-  );
-  return tmat * rmat * smat;
+  mat4 tmat = identity(1.0f);
+  mat4 ret = tmat * rmat * smat;
+  ret = translate(ret, pos);
+  return ret;
 }
 
 void main() {
-  mat4 model = create_model_matrix(scale, rotation, vec3(0.0));
-  model = translate(model, pos);
-  // Calculate the vertex position in world space.
+  // mat4 model = create_model_matrix(scale, rotation, pos);
+  /* Calculate the vertex position in world space. */
   FragPos = vec3(model * vec4(aPos, 1.0));
-  // Transform the normal vector by the invers transpose of the model matrix.
+  /* Transform the normal vector by the invers transpose of the model matrix. */
   Normal = normalize(mat3(transpose(inverse(model))) * aNormal);
-  // Calculate the final position.
+  /* Calculate the final position. */
   gl_Position = projection * view * vec4(FragPos, 1.0);
 }

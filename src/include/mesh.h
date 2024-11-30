@@ -48,12 +48,12 @@ class Mesh {
   vec3 accel;
   vec3 rotation;
   vec3 size;
-  vec3 scale;
+  vec3 _scale;
 
   Mesh(const MVector<float> &verts,
        const MVector<Uint> &indices,
        Uint shader_program,
-       const vec3 &color = {1.0, 0.5, 0.2} /* Default to orange color. */,
+       const vec3 &color = {1.0f, 0.5f, 0.2f} /* Default to orange color. */,
        const vec3 &pos = {},
        const vec3 &vel = {},
        const vec3 &rotation = {},
@@ -68,7 +68,7 @@ class Mesh {
     vel(0.0f),
     rotation(0.0f),
     size(verts_size_vec(verts)),
-    scale(1.0f)
+    _scale(1.0f)
   {
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -97,9 +97,9 @@ class Mesh {
     projection_loc = glGetUniformLocation(shader_program, "projection");
     /* Retrive expansion factor. */
     expansion_factor_loc = glGetUniformLocation(shader_program, "expansion_factor");
-    scale_loc = glGetUniformLocation(shader_program, "scale");
+    scale_loc    = glGetUniformLocation(shader_program, "scale");
     rotation_loc = glGetUniformLocation(shader_program, "rotation");
-    pos_loc = glGetUniformLocation(shader_program, "pos");
+    pos_loc      = glGetUniformLocation(shader_program, "pos");
   }
 
   ~Mesh(void) {
@@ -121,9 +121,12 @@ class Mesh {
     glUniform3fv(pos_loc, 1, &pos[0]);
     /* Pass color to shader. */
     glUniform3fv(color_loc, 1, &color[0]);
-    /* Pass scale vec3 to the shader. */
-    glUniform3fv(scale_loc, 1, &scale[0]);
+    /* Pass _scale vec3 to the shader. */
+    glUniform3fv(scale_loc, 1, &_scale[0]);
     /* Pass matrices to shader. */
+    model = mat4(1.0f);
+    model = scale_matrix(model, _scale);
+    model = translate_matrix(model, pos);
     glUniformMatrix4fv(model_loc,      1, GL_FALSE, &model[0][0]);
     glUniformMatrix4fv(view_loc,       1, GL_FALSE, &game->camera.view[0][0]);
     glUniformMatrix4fv(projection_loc, 1, GL_FALSE, &game->projection[0][0]);
@@ -157,12 +160,12 @@ class Mesh {
 };
 
 __INLINE_NAMESPACE(MeshTools) {
-  __INLINE_CONSTEXPR_VOID update_mesh_rotation(Mesh *mesh) {
-    /* Apply rotation around each axis */
-    mesh->model = glm::rotate(mesh->model, radiansf(mesh->rotation.x), /* X-axis */ vec3(1.0f, 0.0f, 0.0f));  
-    mesh->model = glm::rotate(mesh->model, radiansf(mesh->rotation.y), /* Y-axis */ vec3(0.0f, 1.0f, 0.0f));  
-    mesh->model = glm::rotate(mesh->model, radiansf(mesh->rotation.z), /* Z-axis */ vec3(0.0f, 0.0f, 1.0f));
-  }
+  // __INLINE_CONSTEXPR_VOID update_mesh_rotation(Mesh *mesh) {
+  //   /* Apply rotation around each axis */
+  //   mesh->model = glm::rotate(mesh->model, radiansf(mesh->rotation.x), /* X-axis */ vec3(1.0f, 0.0f, 0.0f));  
+  //   mesh->model = glm::rotate(mesh->model, radiansf(mesh->rotation.y), /* Y-axis */ vec3(0.0f, 1.0f, 0.0f));  
+  //   mesh->model = glm::rotate(mesh->model, radiansf(mesh->rotation.z), /* Z-axis */ vec3(0.0f, 0.0f, 1.0f));
+  // }
 
   __INLINE_CONSTEXPR_VOID accelerate_mesh(Mesh *mesh, const vec3 &f, float dt) {
     rk4_step(&mesh->pos, &mesh->vel, dt, f);
@@ -190,24 +193,24 @@ __INLINE_NAMESPACE(MeshTools) {
     mesh->rotation = roatation;
   }
 
-  __INLINE_CONSTEXPR_VOID set_mesh_pos(Mesh *mesh, const vec3 &pos) {
+  inline void set_mesh_pos(Mesh *mesh, const vec3 &pos) {
     mesh->pos = pos;
-    mesh->model = glm::translate({1.0f}, mesh->pos);
+    mesh->model = translate_matrix({1.0f}, mesh->pos);
   }
 
-  __INLINE_CONSTEXPR_VOID change_mesh_pos(Mesh *mesh, const vec3 &change) {
+  inline void change_mesh_pos(Mesh *mesh, const vec3 &change) {
     mesh->pos += change;
-    mesh->model = glm::translate({1.0f}, mesh->pos);
+    mesh->model = translate_matrix({1.0f}, mesh->pos);
   }
 
-  __INLINE_CONSTEXPR_VOID print_mesh_pos(Mesh *mesh) {
+  inline void print_mesh_pos(Mesh *mesh) {
     vec3 pos = mat_position_vec(mesh->model);
     printf("pos_x: %f, pos_y: %f, pos_z: %f\n", pos.x, pos.y, pos.z);
   }
 
   __INLINE_CONSTEXPR_VOID print_mesh_size(Mesh *mesh) {
     printf("pos_x: %f, pos_y: %f, pos_z: %f\n",
-      (mesh->size.x * mesh->scale.x), (mesh->size.y * mesh->scale.y), (mesh->size.z * mesh->scale.z));
+      (mesh->size.x * mesh->_scale.x), (mesh->size.y * mesh->_scale.y), (mesh->size.z * mesh->_scale.z));
   }
 
   __INLINE_CONSTEXPR_VOID mesh_collison_check(Mesh *m1, Mesh *m2) {
@@ -326,7 +329,7 @@ __NAMESPACE(MeshObject) {
         step.pos.x = pos.x;
         step.pos.y = (pos.y + (i * step_size.y));
         step.pos.z = (pos.z + (i * step_size.z));
-        step.scale = step_size;
+        step._scale = step_size;
         step.color = color;
         data.push_back(step);
       }
